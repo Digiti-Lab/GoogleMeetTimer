@@ -1,0 +1,64 @@
+<div class="timer-body MCcOAc ">
+    <h3 class="text timer-title">Tempo Rimanente:</h3>
+    <div class="timer-container">
+        <span class="timer-digits text" id="time"></span>
+    </div>
+</div>
+
+<style>
+.timer-body {
+    background-color: black; 
+    width: fit-content;
+    padding: 5px 25px 5px 25px;
+    text-align: center;
+    border-radius: 5px;
+    height: fit-content;
+}
+.text {
+    color: white;
+}
+.timer-title {
+    font-size: 15px;
+    margin: 0;
+    opacity: 80%;
+}
+.timer-digits {
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+    font-size: 30px;
+    color: #3e4dec;
+}
+#timer-banner {
+    left: -110px;
+    top: -165px;
+}
+</style>
+
+<script>
+const zeroFill = (n) => {
+    return ('0'+n).slice(-2)
+}
+const timer = (seconds) => {
+    var timer = setInterval(function(){
+        seconds--;
+        setTimer(seconds)
+        if (seconds < 0) {
+            clearInterval(timer);
+        }
+    }, 1000);
+}
+
+const setTimer = (seconds) => {
+    let hh = zeroFill(Math.floor(seconds / 3600))
+    let mm = zeroFill(Math.floor(seconds / 60) % 60)
+    let ss = zeroFill(Math.floor((seconds % 60)))
+
+    if (hh > 0) {
+        document.getElementById('time').innerHTML = `${hh}:${mm}`
+    } else {
+        document.getElementById('time').innerHTML = `${mm}:${ss}`
+    }
+}
+
+timer(3610)
+</script>

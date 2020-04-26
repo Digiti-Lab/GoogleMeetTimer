@@ -1,0 +1,35 @@
+{
+  "name": "Google Meet Timer",
+  "version": "0.1",
+  "description": "Timer per meet",
+  "author": "DGT",
+  "permissions": ["declarativeContent", "storage"],
+  "background": {
+    "scripts": ["./src/background.js"],
+    "persistent": false
+  },
+  "page_action": {
+    "default_popup": "./src/popup.html",
+    "default_icon": {
+      "16": "./src/images/logo_16.png",
+      "32": "./src/images/logo_32.png",
+      "48": "./src/images/logo_48.png",
+      "128": "./src/images/logo_128.png"
+    }
+  },
+  "icons": {
+    "16": "./src/images/logo_16.png",
+    "32": "./src/images/logo_32.png",
+    "48": "./src/images/logo_48.png",
+    "128": "./src/images/logo_128.png"
+  },
+  "manifest_version": 2,
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.meet.google.com/*"
+      ],
+      "js": ["./src/content.js"]
+    }
+  ]
+}
