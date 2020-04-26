@@ -5,8 +5,8 @@
   "author": "DGT",
   "permissions": ["declarativeContent", "storage"],
   "background": {
-    "scripts": ["./src/background.js"],
-    "persistent": false
+    "page": "./src/background.html",
+    "persistent": true
   },
   "page_action": {
     "default_popup": "./src/popup.html",
@@ -31,5 +31,6 @@
       ],
       "js": ["./src/content.js"]
     }
-  ]
+  ],
+  "content_security_policy": "script-src 'self' https://www.gstatic.com/ https://*.firebaseio.com https://www.googleapis.com; object-src 'self'; connect-src 'self' wss://*.firebaseio.com;"
 }

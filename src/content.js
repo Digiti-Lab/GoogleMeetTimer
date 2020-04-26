@@ -1,9 +1,39 @@
+chrome.storage.local.get(['startTime', 'time'], function(result) {
+    console.log(result)
+});
+
+
+
+const updateTime = (time) => {
+    chrome.runtime.sendMessage({type: 'updateValue', opts: {startTime: Date.now(), time}}, (response) => {
+        if(response == 'success') {
+          console.log('updated')
+        }
+    });
+}
+
 // content.js
 const checkCallOn = () => {
     let menu = document.getElementsByClassName('Jrb8ue')
     if (menu.length > 0) { // If the menu exists we are in a call
         clearInterval(intervalId) // Stop the loop
-        main() // Call the main function
+
+        let meetingIdNode = document.getElementsByClassName('SSPGKf p2ZbV')
+        if (meetingIdNode.length) {
+            let meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')
+            if (meetingId) {
+                console.log('meeting id', meetingId)
+                chrome.runtime.sendMessage({type: 'startDatabase', opts: {meetingId}}, (response) => {
+                    if(response == 'started') {
+                        main() // Call the main function
+                    }
+                });
+                
+            } else {
+                console.log('unable to get meeting id')
+            }
+        }
+        
     }
     
 }
@@ -11,7 +41,18 @@ const checkCallOn = () => {
 var intervalId = setInterval(checkCallOn, 250) // Start a loop until a call is entered
 var timerId = null
 var timerNode = null
+var timeSet = null
 const main = () => {
+    let meetingIdNode = document.getElementsByClassName('SSPGKf p2ZbV')
+    if (meetingIdNode.length) {
+        let meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')
+        if (meetingId) {
+            console.log('meeting id', meetingId)
+        } else {
+            console.log('unable to get meeting id')
+        }
+    }
+
     const s = document.createElement('style')
     s.innerHTML = style
     document.body.append(s)
@@ -27,11 +68,34 @@ const main = () => {
 
     chrome.storage.sync.get(['seconds'], function(result) {
         if (result.seconds) {
+            updateTime(result.seconds)
             timer(result.seconds)
         } else {
             document.getElementById('time').innerHTML = "Non impostato"
             setTimeout(() => timerNode.style.display = 'none', 60000)
         }
+    });
+
+    chrome.storage.onChanged.addListener(function(changes) {
+        console.log(changes)
+        if (changes.time) {
+            if (changes.time.newValue !== timeSet) {
+                chrome.storage.local.get(['startTime'], function(result) {
+
+                    let timeRemaining = changes.time.newValue - Math.round((Date.now() - result.startTime) /1000)
+                    console.log(timeRemaining)
+                    if (timeRemaining > 0) {
+                        clearInterval(timerId)
+                        timerId = null
+                        timer(timeRemaining)
+                    } else {
+                        console.log('too late')
+                    } 
+                });                               
+            } else {
+                console.log('I was the sender')
+            }
+        }    
     });
 
     chrome.storage.onChanged.addListener(function(changes) {
@@ -43,7 +107,8 @@ const main = () => {
             if (changes.seconds.newValue != 0) {                
                 if (document.getElementById('timer-banner')) {
                     document.getElementById('timer-banner').outerHTML = ""
-                }                                
+                }
+                updateTime(changes.seconds.newValue)                                
                 timer(changes.seconds.newValue)
             } else {
                 document.getElementById('time').innerHTML = "Non impostato"
@@ -53,10 +118,11 @@ const main = () => {
     });
 }
 
-const timer = (seconds) => {    
+const timer = (seconds) => { 
+    timeSet = seconds   
     if (timerNode.style.display === "none") {
         timerNode.style.display = 'block'
-    }
+    }    
     setTimer(seconds)
     timerId = setInterval(function(){        
         seconds--;

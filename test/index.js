@@ -15,7 +15,7 @@ firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
 var newPostKey = 'vxp-wrrd-upo'
 console.log(newPostKey)
-console.log(ServerDate.now())
+
 function writeUserData() {
     db.ref('meet-id/' + newPostKey).set({
       time: 12345,
