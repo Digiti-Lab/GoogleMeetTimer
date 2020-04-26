@@ -1,4 +1,7 @@
 # GoogleMeetTimer
-This extension adds a timer in the left corner of a Google Meet call.
+Google Chrome extension that adds a timer in the left corner of a Google Meet call.
 
-Developed by DiGiTi Lab
+#### Current release features:
+- Offline timer
+
+Developed by DiGiTi Lab.
