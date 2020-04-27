@@ -1,9 +1,5 @@
-const syncTime = (time) => {
-    chrome.runtime.sendMessage({type: 'updateValue', opts: {startTime: Date.now(), time}}, (response) => {
-        if(response == 'success') {
-          console.log('updated')
-        }
-    });
+const syncTime = (seconds) => {
+    chrome.runtime.sendMessage({type: 'updateValue', opts: {endTime: Date.now() + seconds*1000}});
 }
 
 // content.js
@@ -17,15 +13,16 @@ const checkCallOn = () => {
         if (meetingIdNode.length) {
             let meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')
             if (meetingId) {
-                console.log('meeting id', meetingId)
                 chrome.runtime.sendMessage({type: 'startDatabase', opts: {meetingId}}, (response) => {
                     if(response === 'started' | response === "already_running") {
                         main() // Call the main function
                     }
                 });                
             } else {
-                console.log('unable to get meeting id')
+                console.log('[google-timer] Error: Unable to get meeting id')
             }
+        } else {
+            console.log('[google-timer] Error: Unable to get meeting id')
         }
         
     }
@@ -66,8 +63,8 @@ const main = () => {
     timerNode.addEventListener('click', () => {
         sessionStorage.setItem('seconds', 'value');
     })*/
-    chrome.storage.local.get(['startTime', 'time', 'seconds'], function(result) {
-        let timeRemaining = result.time - Math.round((Date.now() - result.startTime) /1000)
+    chrome.storage.local.get(['endTime', 'seconds'], function(result) {
+        let timeRemaining = Math.round((result.endTime - Date.now()) /1000)
         if (timeRemaining > 0) {
             timer(timeRemaining)
         } else if (result.seconds) {
@@ -94,29 +91,20 @@ const main = () => {
                 document.getElementById('time').innerHTML = "Non impostato"
                 setTimeout(() => !timerInterval && displayTimer(false), 60000)
             } 
-        } else if (changes.time) {
-            if (changes.time.newValue !== timeSet) {
-                chrome.storage.local.get(['startTime'], function(result) {
-
-                    let timeRemaining = changes.time.newValue - Math.round((Date.now() - result.startTime) /1000)
-                    console.log(timeRemaining)
-                    if (timeRemaining > 0) {
-                        clearInterval(timerInterval)
-                        timerInterval = null
-                        timer(timeRemaining)
-                    } else {
-                        console.log('too late')
-                    } 
-                });                               
-            } else {
-                console.log('I was the sender')
+        } else if (changes.endTime) {
+            let timeRemaining = Math.round((changes.endTime.newValue - Date.now()) /1000)
+            if (changes.endTime.newValue !== changes.endTime.oldValue && timeRemaining > 0) {
+                console.log('time synced')
+                clearInterval(timerInterval)
+                timer(timeRemaining)
+            } else if (timeRemaining > 0) { // remove in production
+                console.log('too late')
             }
         }    
     });
 }
 
-const timer = (seconds) => { 
-    timeSet = seconds   
+const timer = (seconds) => {    
     displayTimer(true)    
     setTimer(seconds)
     timerInterval = setInterval(function(){        

@@ -27,12 +27,6 @@ const startDatabase = (meetingId) => {
   const app = firebase.initializeApp(config);
   const appDb = app.database().ref('meet-id/' + meetingId);
   
-  
-  // instantiate global application state object for Chrome Storage and feed in firebase data
-  // Chrome Storage will store our global state as a a JSON stringified value.
-  
-  const applicationState = { values: [] };
-  
   appDb.on('child_added', snapshot => {
     updateState(snapshot.key, snapshot.val());
   });
@@ -48,13 +42,7 @@ const startDatabase = (meetingId) => {
   
   // updateState is a function that writes the changes to Chrome Storage
   function updateState(key, value) {
-    console.log(key, value)
     chrome.storage.local.set({ [key]: value });
-  }
-  
-  // getChildIndex will return the matching element in the object
-  function getChildIndex(appState, id) {
-    return appState.values.findIndex(element => element.id == id)
   }
   
   // if your Chrome Extension requires any content scripts that will manipulate data,
@@ -64,7 +52,7 @@ const startDatabase = (meetingId) => {
     console.log(msg.opts)
     switch (msg.type) {
       case 'updateValue':
-        appDb.set({ startTime: msg.opts.startTime, time: msg.opts.time });
+        appDb.set({ endTime: msg.opts.endTime});
         response('success');
         break;  
       default:
