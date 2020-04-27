@@ -1,10 +1,4 @@
-chrome.storage.local.get(['startTime', 'time'], function(result) {
-    console.log(result)
-});
-
-
-
-const updateTime = (time) => {
+const syncTime = (time) => {
     chrome.runtime.sendMessage({type: 'updateValue', opts: {startTime: Date.now(), time}}, (response) => {
         if(response == 'success') {
           console.log('updated')
@@ -17,6 +11,7 @@ const checkCallOn = () => {
     let menu = document.getElementsByClassName('Jrb8ue')
     if (menu.length > 0) { // If the menu exists we are in a call
         clearInterval(intervalId) // Stop the loop
+        checkCallOffInterval = setInterval(checkCallOff, 1000)
 
         let meetingIdNode = document.getElementsByClassName('SSPGKf p2ZbV')
         if (meetingIdNode.length) {
@@ -24,11 +19,10 @@ const checkCallOn = () => {
             if (meetingId) {
                 console.log('meeting id', meetingId)
                 chrome.runtime.sendMessage({type: 'startDatabase', opts: {meetingId}}, (response) => {
-                    if(response == 'started') {
+                    if(response === 'started' | response === "already_running") {
                         main() // Call the main function
                     }
-                });
-                
+                });                
             } else {
                 console.log('unable to get meeting id')
             }
@@ -38,55 +32,77 @@ const checkCallOn = () => {
     
 }
 
-var intervalId = setInterval(checkCallOn, 250) // Start a loop until a call is entered
-var timerId = null
-var timerNode = null
-var timeSet = null
-const main = () => {
-    let meetingIdNode = document.getElementsByClassName('SSPGKf p2ZbV')
-    if (meetingIdNode.length) {
-        let meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')
-        if (meetingId) {
-            console.log('meeting id', meetingId)
-        } else {
-            console.log('unable to get meeting id')
-        }
+const checkCallOff = () => {
+    let menu = document.getElementsByClassName('Jrb8ue')
+    if (!menu.length) {
+        console.log('[google-timer] Call off')
+        clearInterval(checkCallOffInterval)
+        clearInterval(timerInterval)
+        timerInterval = null
+        timerNode.style.display = 'none'
     }
+}
 
-    const s = document.createElement('style')
-    s.innerHTML = style
-    document.body.append(s)
+const displayTimer = (bool) => {   
+    if (bool) {
+        document.getElementById('google-timer').style.display = 'block'
+    } else {
+        document.getElementById('google-timer').style.display = 'none'
+    }    
+}
 
-    timerNode = document.createElement('div')
-    timerNode.innerHTML = timerHtml
-    document.body.append(timerNode);
+var intervalId = setInterval(checkCallOn, 250) // Start a loop until a call is entered
+var checkCallOffInterval = null
+var timerInterval = null
+var timeSet = null
+
+const main = () => {
+    console.log('script on')
+
+    document.body.insertAdjacentHTML('beforeend', style);
+    document.body.insertAdjacentHTML('beforeend', timerHtml)
 
    /* Could be used to develop a pause function
     timerNode.addEventListener('click', () => {
         sessionStorage.setItem('seconds', 'value');
     })*/
-
-    chrome.storage.sync.get(['seconds'], function(result) {
-        if (result.seconds) {
-            updateTime(result.seconds)
+    chrome.storage.local.get(['startTime', 'time', 'seconds'], function(result) {
+        let timeRemaining = result.time - Math.round((Date.now() - result.startTime) /1000)
+        if (timeRemaining > 0) {
+            timer(timeRemaining)
+        } else if (result.seconds) {
             timer(result.seconds)
         } else {
             document.getElementById('time').innerHTML = "Non impostato"
-            setTimeout(() => timerNode.style.display = 'none', 60000)
+            setTimeout(() => !timer && displayTimer(false), 120000) // Disappear after 2 minutes
         }
     });
 
     chrome.storage.onChanged.addListener(function(changes) {
-        console.log(changes)
-        if (changes.time) {
+        if (changes.seconds) {
+            if (timerInterval) {
+                clearInterval(timerInterval)
+                timerInterval = null
+            }
+            if (changes.seconds.newValue != 0) {                
+                if (document.getElementById('timer-banner')) {
+                    document.getElementById('timer-banner').outerHTML = ""
+                }
+                syncTime(changes.seconds.newValue)                                
+                timer(changes.seconds.newValue)
+            } else {
+                document.getElementById('time').innerHTML = "Non impostato"
+                setTimeout(() => !timerInterval && displayTimer(false), 60000)
+            } 
+        } else if (changes.time) {
             if (changes.time.newValue !== timeSet) {
                 chrome.storage.local.get(['startTime'], function(result) {
 
                     let timeRemaining = changes.time.newValue - Math.round((Date.now() - result.startTime) /1000)
                     console.log(timeRemaining)
                     if (timeRemaining > 0) {
-                        clearInterval(timerId)
-                        timerId = null
+                        clearInterval(timerInterval)
+                        timerInterval = null
                         timer(timeRemaining)
                     } else {
                         console.log('too late')
@@ -97,38 +113,17 @@ const main = () => {
             }
         }    
     });
-
-    chrome.storage.onChanged.addListener(function(changes) {
-        if (changes.seconds) {
-            if (timerId) {
-                clearInterval(timerId)
-                timerId = null
-            }
-            if (changes.seconds.newValue != 0) {                
-                if (document.getElementById('timer-banner')) {
-                    document.getElementById('timer-banner').outerHTML = ""
-                }
-                updateTime(changes.seconds.newValue)                                
-                timer(changes.seconds.newValue)
-            } else {
-                document.getElementById('time').innerHTML = "Non impostato"
-                setTimeout(() => !timerId && (timerNode.style.display = 'none'), 60000)
-            }            
-        }        
-    });
 }
 
 const timer = (seconds) => { 
     timeSet = seconds   
-    if (timerNode.style.display === "none") {
-        timerNode.style.display = 'block'
-    }    
+    displayTimer(true)    
     setTimer(seconds)
-    timerId = setInterval(function(){        
+    timerInterval = setInterval(function(){        
         seconds--;
         setTimer(seconds)
         if (seconds < 0) {
-            clearInterval(timerId);
+            clearInterval(timerInterval);
             let parent = document.getElementsByClassName('o6gIdf zCbbgf')
             if (parent.length) {
                 parent = parent[0]
@@ -163,7 +158,7 @@ const zeroFill = (n) => {
 }
 
 const timerHtml = `
-<div class="timer-body MCcOAc ">
+<div class="timer-body MCcOAc" id="google-timer" style="display: none;">
     <h3 class="text timer-title">Tempo Rimanente:</h3>
     <div class="timer-container">
         <span class="timer-digits text" id="time"></span>
@@ -171,6 +166,7 @@ const timerHtml = `
 </div>
 `
 const style = `
+<style>
 .timer-body {
     background-color: black; 
     width: fit-content;
@@ -197,6 +193,7 @@ const style = `
     left: -110px;
     top: -165px;
 }
+</style>
 `
 
 const message = `

@@ -1,6 +1,6 @@
 var button = document.getElementById('button')
 
-chrome.storage.sync.get(['hh', 'mm', 'ss'], function(result) {
+chrome.storage.local.get(['hh', 'mm', 'ss'], function(result) {
     console.log(result)
     document.getElementById('hh').placeholder = result.hh
     document.getElementById('mm').placeholder = result.mm
@@ -16,7 +16,7 @@ document.addEventListener('keyup', (e) => {
     //button.innerHTML = "salvato"
     console.log('ok', {hh, mm, ss, seconds})
      // Save it using the Chrome extension storage API.
-     chrome.storage.sync.set({hh, mm, ss, seconds}, function() {
+     chrome.storage.local.set({hh, mm, ss, seconds}, function() {
         // Notify that we saved.
         console.log('settings saved')
       });

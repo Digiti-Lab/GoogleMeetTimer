@@ -77,9 +77,13 @@ const startDatabase = (meetingId) => {
 chrome.runtime.onMessage.addListener((msg, sender, response) => {
   console.log(msg)
   if (msg.type === "startDatabase" && isRunning === false && msg.opts.meetingId) {
+    isRunning = true
     console.log('started')
     startDatabase(msg.opts.meetingId)
     response('started');
+  } else if (isRunning) {
+    console.log('already running')
+    response('already_running')
   } else {
     console.log('error')
     response('error')
