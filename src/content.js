@@ -28,10 +28,8 @@ const checkCallOn = () => {
             }
         } else {
             console.log('[google-timer] Error: Unable to get meeting id')
-        }
-        
-    }
-    
+        }        
+    }    
 }
 
 const checkCallOff = () => {
