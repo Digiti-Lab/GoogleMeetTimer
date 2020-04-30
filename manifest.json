@@ -29,8 +29,11 @@
       "matches": [
         "*://*.meet.google.com/*"
       ],
-      "js": ["./src/content.js"]
+      "js": ["src/socket.io-2.3.0.js", "./src/content.js"]
     }
+  ],
+  "web_accessible_resources": [
+    "./src/socket.io-2.3.0.js"
   ],
   "content_security_policy": "script-src 'self' https://www.gstatic.com/ https://*.firebaseio.com https://www.googleapis.com; object-src 'self'; connect-src 'self' wss://*.firebaseio.com;"
 }

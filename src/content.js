@@ -1,8 +1,8 @@
-const syncTime = (seconds) => {
-    chrome.runtime.sendMessage({type: 'updateValue', opts: {endTime: Date.now() + seconds*1000}});
-}
-
 // content.js
+
+const socket = io.connect('http://localhost:3000');
+
+// Interval functions
 const checkCallOn = () => {
     let menu = document.getElementsByClassName('Jrb8ue')
     if (menu.length > 0) { // If the menu exists we are in a call
@@ -13,11 +13,16 @@ const checkCallOn = () => {
         if (meetingIdNode.length) {
             let meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')
             if (meetingId) {
-                chrome.runtime.sendMessage({type: 'startDatabase', opts: {meetingId}}, (response) => {
-                    if(response === 'started' | response === "already_running") {
-                        main() // Call the main function
-                    }
-                });                
+                if (socket.connected) {
+                    socket.emit('new_meet', {id: meetingId});
+                } else {
+                    socket.on('connect', () => {
+                        console.log('now connected')
+                        socket.emit('new_meet', {id: meetingId});
+                    }); 
+                }
+                
+                main(meetingId)
             } else {
                 console.log('[google-timer] Error: Unable to get meeting id')
             }
@@ -33,12 +38,14 @@ const checkCallOff = () => {
     let menu = document.getElementsByClassName('Jrb8ue')
     if (!menu.length) {
         console.log('[google-timer] Call off')
+        socket.close() // End the websocket
         clearInterval(checkCallOffInterval)
         clearInterval(timerInterval)
         timerInterval = null
         timerNode.style.display = 'none'
     }
 }
+
 
 const displayTimer = (bool) => {   
     if (bool) {
@@ -53,21 +60,15 @@ var checkCallOffInterval = null
 var timerInterval = null
 var timeSet = null
 
-const main = () => {
+
+const main = (meetingId) => {
     console.log('script on')
 
     document.body.insertAdjacentHTML('beforeend', style);
     document.body.insertAdjacentHTML('beforeend', timerHtml)
 
-   /* Could be used to develop a pause function
-    timerNode.addEventListener('click', () => {
-        sessionStorage.setItem('seconds', 'value');
-    })*/
-    chrome.storage.local.get(['endTime', 'seconds'], function(result) {
-        let timeRemaining = Math.round((result.endTime - Date.now()) /1000)
-        if (timeRemaining > 0) {
-            timer(timeRemaining)
-        } else if (result.seconds) {
+    chrome.storage.local.get(['seconds'], function(result) {
+        if (result.seconds) {
             timer(result.seconds)
         } else {
             document.getElementById('time').innerHTML = "Non impostato"
@@ -75,32 +76,37 @@ const main = () => {
         }
     });
 
+    socket.on('update_time', (newTime) => {
+        let timeRemaining = Math.round((newTime - Date.now()) /1000)
+        if (timeRemaining > 0) {
+            clearInterval(timerInterval)
+            timerInterval = null
+            timer(timeRemaining)
+        } else if (timeRemaining > 0) { // remove in production
+            console.log('too late')
+        }
+    })
+
     chrome.storage.onChanged.addListener(function(changes) {
         if (changes.seconds) {
-            if (timerInterval) {
-                clearInterval(timerInterval)
-                timerInterval = null
-            }
+            clearInterval(timerInterval)
+            timerInterval = null
             if (changes.seconds.newValue != 0) {                
                 if (document.getElementById('timer-banner')) {
                     document.getElementById('timer-banner').outerHTML = ""
                 }
-                syncTime(changes.seconds.newValue)                                
+                if (socket.connected) {
+                    socket.emit('sync_time', {id: meetingId, endTime: Date.now() + changes.seconds.newValue*1000})
+                } else {
+                    console.warn('[google-timer] Unable to sync time')
+                }
+                                                
                 timer(changes.seconds.newValue)
             } else {
                 document.getElementById('time').innerHTML = "Non impostato"
                 setTimeout(() => !timerInterval && displayTimer(false), 60000)
             } 
-        } else if (changes.endTime) {
-            let timeRemaining = Math.round((changes.endTime.newValue - Date.now()) /1000)
-            if (changes.endTime.newValue !== changes.endTime.oldValue && timeRemaining > 0) {
-                console.log('time synced')
-                clearInterval(timerInterval)
-                timer(timeRemaining)
-            } else if (timeRemaining > 0) { // remove in production
-                console.log('too late')
-            }
-        }    
+        }   
     });
 }
 
@@ -112,6 +118,7 @@ const timer = (seconds) => {
         setTimer(seconds)
         if (seconds < 0) {
             clearInterval(timerInterval);
+            timerInterval = null
             let parent = document.getElementsByClassName('o6gIdf zCbbgf')
             if (parent.length) {
                 parent = parent[0]
