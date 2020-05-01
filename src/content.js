@@ -1,6 +1,6 @@
 // content.js
 
-const socket = io.connect('http://localhost:3000');
+const socket = io.connect('https://timer.digitilab.it');
 
 // Interval functions
 const checkCallOn = () => {
