@@ -40,7 +40,7 @@ const checkCallOff = () => {
         clearInterval(checkCallOffInterval)
         clearInterval(timerInterval)
         timerInterval = null
-        timerNode.style.display = 'none'
+        displayTimer(false)
     }
 }
 
