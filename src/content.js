@@ -143,30 +143,41 @@ const setTimer = (seconds) => {
         } else {
             document.getElementById('time').innerHTML = `${mm}:${ss}`
         }
+
+        let textStyle = getComputedStyle(document.getElementById('time')).color 
+        if (seconds <= 120 && textStyle == "rgb(95, 99, 104)") {
+            document.getElementById('time').style.color = "#d93025"
+        } else if (seconds >= 120 && textStyle !== "rgb(95, 99, 104)") {
+            document.getElementById('time').style.color = "#5f6368"
+        }
     }    
 }
 
 const zeroFill = (n) => {
     return ('0'+n).slice(-2)
 }
-
+//#d93025
 const timerHtml = `
-<div class="timer-body MCcOAc" id="google-timer" style="display: none;">
-    <h3 class="text timer-title">Tempo Rimanente:</h3>
-    <div class="timer-container">
-        <span class="timer-digits text" id="time"></span>
+<div class="timer-app-container">
+    <div class="timer-body" id="google-timer" style="display: none;">
+    <p class="timer-digits text" id="time"></p>
     </div>
 </div>
 `
 const style = `
 <style>
 .timer-body {
-    background-color: black; 
+    background-color: white; 
     width: fit-content;
-    padding: 5px 25px 5px 25px;
+    border-radius: 0 0 8px 8px;
+    padding: 0 20px 0 20px;
     text-align: center;
-    border-radius: 5px;
     height: fit-content;
+    top: 0;
+    /*left: 0;*/
+    position: absolute;
+    z-index: 1;
+    height: 48px;
 }
 .text {
     color: white;
@@ -180,11 +191,16 @@ const style = `
     font-feature-settings: "tnum";
     font-variant-numeric: tabular-nums;
     font-size: 30px;
-    color: #3e4dec;
+    color: #5f6368;
+    margin: 5px 0 0 0;
 }
 #timer-banner {
     left: -110px;
     top: -165px;
+}
+.timer-app-container {
+    display: flex;
+    justify-content: center;
 }
 </style>
 `
