@@ -6,13 +6,14 @@ const checkCallOn = () => {
     let menu = document.getElementsByClassName('Jrb8ue')
     if (menu.length > 0) { // If the menu exists we are in a call
         clearInterval(intervalId) // Stop the loop
-        checkCallOffInterval = setInterval(checkCallOff, 1000)
-
+        checkCallOffInterval = setInterval(checkCallOff, 1000)        
         let meetingIdNode = document.getElementsByClassName('SSPGKf p2ZbV')
         if (meetingIdNode.length) {
-            let meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')
+            meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')
+            
             if (meetingId) {
                 if (socket.connected) {
+                    console.log(meetingId)
                     socket.emit('new_meet', {id: meetingId});
                 } else {
                     socket.on('connect', () => {
@@ -21,7 +22,7 @@ const checkCallOn = () => {
                     }); 
                 }
                 
-                main(meetingId)
+                main()
             } else {
                 console.log('[google-timer] Error: Unable to get meeting id')
             }
@@ -67,31 +68,39 @@ const displaySettings = (bool) => {
     }
 }
 
+const getUserName = () => {
+    if (document.getElementsByClassName("epqixc YUGmGb").length) {
+        if (document.getElementsByClassName("epqixc YUGmGb")[0].innerHTML) {
+            return document.getElementsByClassName("epqixc YUGmGb")[0].innerHTML
+        }
+    }
+}
 
 var intervalId = setInterval(checkCallOn, 250) // Start a loop until a call is entered
 var checkCallOffInterval = null
 var timerInterval = null
 var timeSet = null
-
-
-const main = (meetingId) => {
+var meetingId = null
+const main = () => {
     console.log('[google-timer] Plugin started!')
 
     document.body.insertAdjacentHTML('beforeend', style);
     document.body.insertAdjacentHTML('beforeend', timerHtml)
 
     window.addEventListener('keyup', (e) => {
-        if (e.target.offsetParent.id === 'google-timer') {
-            clearInterval(timerInterval)
-            let hh = zeroFill(document.getElementById('hh').value)
-            let mm = zeroFill(document.getElementById('mm').value)
-            let ss = zeroFill(document.getElementById('ss').value)
-            let seconds = parseInt(hh)*3600 + parseInt(mm)*60 + parseInt(ss)
-            setTimer(seconds)
-
-             // Save it using the Chrome extension storage API.
-             chrome.storage.local.set({seconds});
-        }        
+        if (e.target.offsetParent) {
+            if (e.target.offsetParent.id === 'google-timer') {
+                clearInterval(timerInterval)
+                let hh = zeroFill(document.getElementById('hh').value)
+                let mm = zeroFill(document.getElementById('mm').value)
+                let ss = zeroFill(document.getElementById('ss').value)
+                let seconds = parseInt(hh)*3600 + parseInt(mm)*60 + parseInt(ss)
+                setTimer(seconds)
+    
+                 // Save it using the Chrome extension storage API.
+                 chrome.storage.local.set({seconds});                 
+            }
+        }                
     })
     document.getElementById('timer-settings').addEventListener('mouseover', () => {
         displaySettings(true)
@@ -106,12 +115,23 @@ const main = (meetingId) => {
             if (result.seconds) {
                 clearInterval(timerInterval)
                 timer(result.seconds)
+                if (socket.connected) {
+                    const dataScript = contains("script", "ds:7");
+                    const userData = JSON.parse(dataScript[1].text.match(/\[[^\}]*/)[0]);
+                    let userName = userData[6] || "" 
+                    let userImage = userData[5] || ""
+                    console.log('sync time eimitted')
+                    socket.emit('sync_time', {id: meetingId, endTime: Date.now() + result.seconds*1000, senderName: userName, userImage})
+                } else {
+                    console.warn('[google-timer] Unable to sync time')
+                }
             }            
           });
     })
     chrome.storage.local.get(['seconds'], function(result) {
         if (result.seconds) {
             timer(result.seconds)
+            
         } else {
             document.getElementById('time').style.color = "#5f6368"
             document.getElementById('time').innerHTML = "00:00"
@@ -119,12 +139,14 @@ const main = (meetingId) => {
         }
     });
 
-    socket.on('update_time', (newTime) => {
-        let timeRemaining = Math.round((newTime - Date.now()) /1000)
+    socket.on('update_time', ({endTime, senderName, userImage}) => {
+        let timeRemaining = Math.round((endTime - Date.now()) /1000)
         if (timeRemaining > 0) {
             clearInterval(timerInterval)
             timerInterval = null
             timer(timeRemaining)
+            notification(senderName, userImage)
+
         } else if (timeRemaining > 0) { // remove in production
             console.log('too late')
         }
@@ -199,6 +221,19 @@ const settingsHtml = `
 </div>
 `
 
+const notification = (userName, userImage) => {
+    if (userName) {
+        document.getElementById('timer-message-description').innerHTML = `<b>${userName}</b> ha aggiornato il timer.`
+        document.getElementById('timer-notification-image').src = userImage || ""
+    } else {
+        document.getElementById('timer-message-description').innerHTML = `<b>E' stato impostato un timer</b> per la riunione.`
+    }
+    document.getElementById('timer-notification').style.opacity = 1
+    setTimeout(() => document.getElementById('timer-notification').style.opacity = 0, 20000)
+}
+
+
+
 /*
 <svg width="24" height="24" id="timer-confirm">
     <path fill="#5f6368" d="M9 16.17L5.53 12.7c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L20.29 7.71c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0L9 16.17z"></path>
@@ -232,6 +267,11 @@ const timerHtml = `
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="timer-notification-body" id="timer-notification">
+        <img class="timer-notification-image" id="timer-notification-image" src=""/>
+        <p class="timer-message-description" id="timer-message-description"></p>
     </div>
 </div>
 `
@@ -332,7 +372,26 @@ const style = `
     flex-wrap: wrap; 
     width: 400px;
 }
-
+.timer-notification-body {
+    position: fixed;
+    bottom: 100px;
+    left: 20px;
+    z-index: 10000;
+    display: flex;
+    background-color: white;
+    padding: 0 30px;
+    border-radius: 30px;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    transition: opacity .5s ease-in-out;
+    opacity: 0;
+}
+.timer-notification-image {
+    max-height: 30px;
+    margin-right: 10px;
+    margin-left: -15px;
+}
 @media only screen and (max-width: 1080px) {
     .timer-body.settings-open {
         width: 120px;
@@ -377,3 +436,10 @@ const message = `
     <div class="QSW55" jsname="nMj4jb" style="left: 125px;"></div>
 </div>
 `
+
+const contains = (selector, text) => {
+    var elements = document.querySelectorAll(selector);
+    return [].filter.call(elements, function(element) {
+      return RegExp(text).test(element.textContent);
+    });
+  };
