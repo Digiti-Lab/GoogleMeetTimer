@@ -1,38 +1,50 @@
-<div class="timer-body MCcOAc ">
-    <h3 class="text timer-title">Tempo Rimanente:</h3>
-    <div class="timer-container">
-        <span class="timer-digits text" id="time"></span>
+<div class="timer-app-container">
+    <div class="timer-body" id="google-timer" style="display: none;">
+    <p class="timer-digits text" id="time"></p>
     </div>
 </div>
 
 <style>
-.timer-body {
-    background-color: black; 
-    width: fit-content;
-    padding: 5px 25px 5px 25px;
-    text-align: center;
-    border-radius: 5px;
-    height: fit-content;
-}
-.text {
-    color: white;
-}
-.timer-title {
-    font-size: 15px;
-    margin: 0;
-    opacity: 80%;
-}
-.timer-digits {
-    font-feature-settings: "tnum";
-    font-variant-numeric: tabular-nums;
-    font-size: 30px;
-    color: #3e4dec;
-}
-#timer-banner {
-    left: -110px;
-    top: -165px;
-}
-</style>
+    body {
+        background-color: black;
+    }
+    .timer-body {
+        background-color: white; 
+        width: fit-content;
+        border-radius: 0 0 8px 8px;
+        padding: 0 20px 0 20px;
+        text-align: center;
+        height: fit-content;
+        top: 0;
+        /*left: 0;*/
+        position: absolute;
+        z-index: 1;
+        height: 48px;
+    }
+    .text {
+        color: white;
+    }
+    .timer-title {
+        font-size: 15px;
+        margin: 0;
+        opacity: 80%;
+    }
+    .timer-digits {
+        font-feature-settings: "tnum";
+        font-variant-numeric: tabular-nums;
+        font-size: 30px;
+        color: #5f6368;
+        margin: 5px 0 0 0;
+    }
+    #timer-banner {
+        left: -110px;
+        top: -165px;
+    }
+    .timer-app-container {
+        display: flex;
+        justify-content: center;
+    }
+    </style>
 
 <script>
 const zeroFill = (n) => {
