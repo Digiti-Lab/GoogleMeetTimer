@@ -11,17 +11,7 @@ const checkCallOn = () => {
         if (meetingIdNode.length) {
             meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')
             
-            if (meetingId) {
-                if (socket.connected) {
-                    console.log(meetingId)
-                    socket.emit('new_meet', {id: meetingId});
-                } else {
-                    socket.on('connect', () => {
-                        console.log('now connected')
-                        socket.emit('new_meet', {id: meetingId});
-                    }); 
-                }
-                
+            if (meetingId) {             
                 main()
             } else {
                 console.log('[google-timer] Error: Unable to get meeting id')
@@ -36,7 +26,7 @@ const checkCallOff = () => {
     let menu = document.getElementsByClassName('Jrb8ue')
     if (!menu.length) {
         console.log('[google-timer] Call off')
-        socket.close() // End the websocket
+        socket.close() // Close the websocket
         clearInterval(checkCallOffInterval)
         clearInterval(timerInterval)
         timerInterval = null
@@ -68,90 +58,79 @@ const displaySettings = (bool) => {
     }
 }
 
-const getUserName = () => {
-    if (document.getElementsByClassName("epqixc YUGmGb").length) {
-        if (document.getElementsByClassName("epqixc YUGmGb")[0].innerHTML) {
-            return document.getElementsByClassName("epqixc YUGmGb")[0].innerHTML
-        }
-    }
-}
-
 var intervalId = setInterval(checkCallOn, 250) // Start a loop until a call is entered
 var checkCallOffInterval = null
 var timerInterval = null
 var timeSet = null
 var meetingId = null
+
 const main = () => {
     console.log('[google-timer] Plugin started!')
 
-    document.body.insertAdjacentHTML('beforeend', style);
-    document.body.insertAdjacentHTML('beforeend', timerHtml)
+    document.body.insertAdjacentHTML('beforeend', style) // Inject css
+    document.body.insertAdjacentHTML('beforeend', timerHtml) // Inject html 
 
-    window.addEventListener('keyup', (e) => {
-        if (e.target.offsetParent) {
-            if (e.target.offsetParent.id === 'google-timer') {
-                clearInterval(timerInterval)
-                let hh = zeroFill(document.getElementById('hh').value)
-                let mm = zeroFill(document.getElementById('mm').value)
-                let ss = zeroFill(document.getElementById('ss').value)
-                let seconds = parseInt(hh)*3600 + parseInt(mm)*60 + parseInt(ss)
-                setTimer(seconds)
-    
-                 // Save it using the Chrome extension storage API.
-                 chrome.storage.local.set({seconds});                 
-            }
-        }                
+    chrome.storage.local.get(['seconds'], (result) => { // Check if default time is set
+        if (result.seconds) {
+            timer(result.seconds)
+        } else {
+            document.getElementById('time').style.color = "#5f6368"
+            document.getElementById('time').innerHTML = "00:00"
+        }
+        socket.connected && socket.emit('new_meet', {id: meetingId, endTime: Date.now() + result.seconds*1000});
+    });
+
+    socket.on('update_time', ({endTime, senderName, userImage}) => {
+        let timeRemaining = Math.round((endTime - Date.now()) /1000) // Get the remaining seconds
+        if (timeRemaining > 0) { // If it is not too late
+            clearInterval(timerInterval) // Reset the timer
+            timerInterval = null
+            timer(timeRemaining) // Start the new timer
+            notification(senderName, userImage) // Notify the user
+        }
     })
+
+    // ----- LISTENERS ----- //
     document.getElementById('timer-settings').addEventListener('mouseover', () => {
         displaySettings(true)
     })
     document.getElementById('google-timer').addEventListener('mouseleave', () => {
         displaySettings(false)
     })
-
+    window.addEventListener('keyup', (e) => { // If keys are pressed
+        if (e.target.offsetParent) {
+            if (e.target.offsetParent.id === 'google-timer') { // If they are pressed in the plugin
+                clearInterval(timerInterval)
+                let hh = document.getElementById('hh').value || 0// get hh, mm, ss
+                let mm = document.getElementById('mm').value || 0
+                let ss = document.getElementById('ss').value || 0
+                let seconds = parseInt(hh)*3600 + parseInt(mm)*60 + parseInt(ss) // Get seconds
+                setTimer(seconds) // Display the new timer
+                chrome.storage.local.set({seconds}); //Save the new value in the storage
+            }
+        }                
+    })
     document.getElementById('timer-confirm').addEventListener('click', () => {
         displaySettings(false)
-        chrome.storage.local.get('seconds', (result) => {
+        chrome.storage.local.get('seconds', (result) => { // Get previously saved data
             if (result.seconds) {
                 clearInterval(timerInterval)
                 timer(result.seconds)
                 if (socket.connected) {
-                    const dataScript = contains("script", "ds:7");
-                    const userData = JSON.parse(dataScript[1].text.match(/\[[^\}]*/)[0]);
+                    const dataScript = contains("script", "ds:7")
+                    const userData = JSON.parse(dataScript[1].text.match(/\[[^\}]*/)[0])
                     let userName = userData[6] || "" 
                     let userImage = userData[5] || ""
-                    console.log('sync time eimitted')
                     socket.emit('sync_time', {id: meetingId, endTime: Date.now() + result.seconds*1000, senderName: userName, userImage})
                 } else {
                     console.warn('[google-timer] Unable to sync time')
                 }
             }            
           });
-    })
-    chrome.storage.local.get(['seconds'], function(result) {
-        if (result.seconds) {
-            timer(result.seconds)
-            
-        } else {
-            document.getElementById('time').style.color = "#5f6368"
-            document.getElementById('time').innerHTML = "00:00"
-            setTimeout(() => !timer && displayTimer(false), 120000) // Disappear after 2 minutes
-        }
-    });
-
-    socket.on('update_time', ({endTime, senderName, userImage}) => {
-        let timeRemaining = Math.round((endTime - Date.now()) /1000)
-        if (timeRemaining > 0) {
-            clearInterval(timerInterval)
-            timerInterval = null
-            timer(timeRemaining)
-            notification(senderName, userImage)
-
-        } else if (timeRemaining > 0) { // remove in production
-            console.log('too late')
-        }
-    })
+    })   
 }
+
+
 
 const timer = (seconds) => {    
     displayTimer(true)    
@@ -203,23 +182,6 @@ const setTimer = (seconds) => {
 const zeroFill = (n) => {
     return ('0'+n).slice(-2)
 }
-//#d93025
-
-const settingsHtml = `
-<div class="timer-container settings" id="timer-settings-container">
-    <input class="timer-input" placeholder="00" name="time" id="hh" autocomplete="off"><p class="timer-label">h</p>
-    <div class="qO3Z3c timer-divider"></div>
-    <input class="timer-input" placeholder="00" name="time" id="mm" autocomplete="off"><p class="timer-label">min</p>
-    <div class="qO3Z3c timer-divider"></div>
-    <input class="timer-input" placeholder="00" name="time" id="ss" autocomplete="off"><p class="timer-label">sec</p>
-    <div class="qO3Z3c timer-divider"></div>
-    <div class="center">
-        <svg width="24" height="24" id="timer-close">
-            <path fill="green" d="M18.3 5.71c-.39-.39-1.02-.39-1.41 0L12 10.59 7.11 5.7c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41L10.59 12 5.7 16.89c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0L12 13.41l4.89 4.89c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L13.41 12l4.89-4.89c.38-.38.38-1.02 0-1.4z"></path>
-        </svg>
-    </div>
-</div>
-`
 
 const notification = (userName, userImage) => {
     if (userName) {
@@ -232,14 +194,6 @@ const notification = (userName, userImage) => {
     setTimeout(() => document.getElementById('timer-notification').style.opacity = 0, 20000)
 }
 
-
-
-/*
-<svg width="24" height="24" id="timer-confirm">
-    <path fill="#5f6368" d="M9 16.17L5.53 12.7c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L20.29 7.71c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0L9 16.17z"></path>
-</svg>
-
-    <div class="qO3Z3c divider"></div>*/
 const timerHtml = `
 <div class="timer-app-container" id="timer-plugin">
     <div class="timer-body" id="google-timer">
@@ -268,7 +222,6 @@ const timerHtml = `
             </div>
         </div>
     </div>
-
     <div class="timer-notification-body" id="timer-notification">
         <img class="timer-notification-image" id="timer-notification-image" src=""/>
         <p class="timer-message-description" id="timer-message-description"></p>
