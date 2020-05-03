@@ -3,16 +3,14 @@
 const socket = io.connect('https://timer.digitilab.it');
 // Interval functions
 const checkCallOn = () => {
-    let menu = document.getElementsByClassName('Jrb8ue')
-    if (menu.length > 0) { // If the menu exists we are in a call
-        clearInterval(intervalId) // Stop the loop
+    if (document.getElementsByClassName('Jrb8ue').lenght) { // If the menu exists we are in a call
+        clearInterval(checkCallOnnInterval) // Stop the loop
         checkCallOffInterval = setInterval(checkCallOff, 1000)        
         let meetingIdNode = document.getElementsByClassName('SSPGKf p2ZbV')
         if (meetingIdNode.length) {
-            meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')
-            
+            let meetingId = meetingIdNode[0].getAttribute('data-unresolved-meeting-id')            
             if (meetingId) {             
-                main()
+                main(meetingId)
             } else {
                 console.log('[google-timer] Error: Unable to get meeting id')
             }
@@ -21,10 +19,11 @@ const checkCallOn = () => {
         }        
     }    
 }
+var checkCallOnnInterval = setInterval(checkCallOn, 250) // Start a loop until a call is entered
 
+var checkCallOffInterval = null
 const checkCallOff = () => {
-    let menu = document.getElementsByClassName('Jrb8ue')
-    if (!menu.length) {
+    if (!document.getElementsByClassName('Jrb8ue').length) {
         console.log('[google-timer] Call off')
         socket.close() // Close the websocket
         clearInterval(checkCallOffInterval)
@@ -49,7 +48,6 @@ const displaySettings = (bool) => {
         document.getElementById('timer-settings').style.display = 'none'
         document.getElementById('timer-main-divider').classList.add('settings-open')        
         document.getElementById('google-timer').classList.add('settings-open')
-
     } else {
         document.getElementById('timer-settings-container').style.display = 'none'
         document.getElementById('timer-settings').style.display = 'block'
@@ -58,13 +56,9 @@ const displaySettings = (bool) => {
     }
 }
 
-var intervalId = setInterval(checkCallOn, 250) // Start a loop until a call is entered
-var checkCallOffInterval = null
 var timerInterval = null
-var timeSet = null
-var meetingId = null
 
-const main = () => {
+const main = (meetingId) => {
     console.log('[google-timer] Plugin started!')
 
     document.body.insertAdjacentHTML('beforeend', style) // Inject css
@@ -130,8 +124,6 @@ const main = () => {
     })   
 }
 
-
-
 const timer = (seconds) => {    
     displayTimer(true)    
     setTimer(seconds)
@@ -151,9 +143,7 @@ const timer = (seconds) => {
                 messageNode.innerHTML = message
                 parent.append(messageNode)
                 document.getElementById('timer-banner-button').addEventListener("click", () => document.getElementById('timer-banner').outerHTML = "")
-            } else {
-                console.log('[google-timer] Error: unable to show the finish timer-confirm (no element by class)')
-            }        
+            }       
         }
     }, 1000);
 }
@@ -208,11 +198,14 @@ const timerHtml = `
                 </span>
             </div>
             <div class="timer-container-settings" id="timer-settings-container" style="display: none;">
-                <input class="timer-input" placeholder="00" name="time" id="hh" autocomplete="off"><p class="timer-label">h</p>
+                <input class="timer-input" placeholder="00" name="time" id="hh" autocomplete="off">
+                <p class="timer-label">h</p>
                 <div class="qO3Z3c timer-divider"></div>
-                <input class="timer-input" placeholder="00" name="time" id="mm" autocomplete="off"><p class="timer-label">min</p>
+                <input class="timer-input" placeholder="00" name="time" id="mm" autocomplete="off">
+                <p class="timer-label">min</p>
                 <div class="qO3Z3c timer-divider"></div>
-                <input class="timer-input" placeholder="00" name="time" id="ss" autocomplete="off"><p class="timer-label">sec</p>
+                <input class="timer-input" placeholder="00" name="time" id="ss" autocomplete="off">
+                <p class="timer-label">sec</p>
                 <div class="qO3Z3c timer-divider"></div>
                 <div class="center">
                     <svg width="24" height="24" id="timer-confirm">
@@ -223,7 +216,7 @@ const timerHtml = `
         </div>
     </div>
     <div class="timer-notification-body" id="timer-notification">
-        <img class="timer-notification-image" id="timer-notification-image" src=""/>
+        <img class="timer-notification-image" id="timer-notification-image" src="" />
         <p class="timer-message-description" id="timer-message-description"></p>
     </div>
 </div>
@@ -243,13 +236,10 @@ const style = `
 .timer-body {
     display: flex;
     background-color: white; 
-    /*width: fit-content;*/
     border-radius: 0 0 8px 8px;
     padding: 0 20px 0 20px;
     text-align: center;
-    /*height: fit-content;*/
     top: 0;
-    /*left: 0;*/
     position: absolute;
     z-index: 1;
     height: 48px;
@@ -395,4 +385,4 @@ const contains = (selector, text) => {
     return [].filter.call(elements, function(element) {
       return RegExp(text).test(element.textContent);
     });
-  };
+};
