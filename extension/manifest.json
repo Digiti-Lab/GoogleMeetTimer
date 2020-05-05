@@ -1,6 +1,6 @@
 {
   "name": "Google Meet Timer",  
-  "description": "Timer per meet",
+  "description": "Timer extension for google meet",
   "default_locale": "en",
   "version": "0.0.1",
   "author": "DGT",
