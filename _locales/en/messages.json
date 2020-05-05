@@ -1,0 +1,18 @@
+{
+    "appName": {
+      "message": "Google Meet Timer",
+      "description": "The title of the application, displayed in the web store."
+    },
+    "appDesc": {
+      "message": "Timer extension for google meet", 
+      "description":"The description of the application, displayed in the web store."
+    },
+    "timerUpdate": {
+        "message": "updated the timer.",
+        "description": "Displayed when the timer is updated."
+    },
+    "timerSet": {
+        "message": "<b>A timer has been set</b> for the call.",
+        "description": "Displayed when a timer has been already set for the call."
+    }
+}

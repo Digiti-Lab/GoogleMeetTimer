@@ -63,7 +63,6 @@ var checkCallOffInterval = null
 var timerInterval = null
 var timeSet = null
 var meetingId = null
-
 const main = () => {
     console.log('[google-timer] Plugin started!')
 
@@ -185,10 +184,10 @@ const zeroFill = (n) => {
 
 const notification = (userName, userImage) => {
     if (userName) {
-        document.getElementById('timer-message-description').innerHTML = `<b>${userName}</b> ha aggiornato il timer.`
+        document.getElementById('timer-message-description').innerHTML = `<b>${userName}</b> ${chrome.i18n.getMessage("timerUpdate")}`
         document.getElementById('timer-notification-image').src = userImage || ""
     } else {
-        document.getElementById('timer-message-description').innerHTML = `<b>E' stato impostato un timer</b> per la riunione.`
+        document.getElementById('timer-message-description').innerHTML = chrome.i18n.getMessage("timerSet")
     }
     document.getElementById('timer-notification').style.opacity = 1
     setTimeout(() => document.getElementById('timer-notification').style.opacity = 0, 20000)

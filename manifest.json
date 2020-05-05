@@ -1,7 +1,8 @@
 {
-  "name": "Google Meet Timer",
-  "version": "0.0.1",
+  "name": "Google Meet Timer",  
   "description": "Timer per meet",
+  "default_locale": "en",
+  "version": "0.0.1",
   "author": "DGT",
   "permissions": ["storage"],
   "icons": {
